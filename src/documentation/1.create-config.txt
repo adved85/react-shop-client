@@ -1,0 +1,73 @@
+---===== FRONT END =====-
+@@@@ create react client @@@@@
+https://youtu.be/731wley-JfM?list=PLRB0wzP8AS_GMe_1P-hAZOYjn-a2CdhWA&t=1189
+
+
+>new project
+	cd to /containerized - path for all kind of frontends
+
+	home@laravuy:~/containerized$ mkdir react-shop-client
+								$ cd react-shop-client
+
+	... repeat the same steps as described in the https://github.com/adved85/react-vite-app repo's README.md
+
+
+>unlock files/folders 💫
+	Since all files/folders are locked (access is allowed only to root), 
+	this command will unlock the resource for the user named "home".
+
+		$ sudo chown -R home:home /home/home/containerized/react-shop-client/
+		OR
+		home@laravuy:~/containerized$ sudo chown -R home:home react-shop-client/
+
+
+>install packages
+	ok, app was successfully installed and running!
+	now let's install some extra packages - react-router-dom, react-hook-form (useForm) and react-toastify
+
+		enter to frontend shell
+			docker compose run --rm frontend sh
+
+		install router-dom
+			npm i react-router-dom
+
+		install useForm
+			npm install react-hook-form
+
+		install toast
+			npm i react-toastify
+
+>Docs of installed packages
+	https://reactrouter.com/
+	https://www.react-hook-form.com/get-started/
+	https://fkhadra.github.io/react-toastify/introduction/
+
+
+
+>git init and first push
+------------------------
+
+	…or create a new repository on the command line
+
+	echo "# react-shop-client" >> README.md
+	git init
+	git add README.md
+	git commit -m "first commit"
+	git branch -M main
+	git remote add origin git@github.com:adved85/react-shop-client.git
+	git push -u origin main
+
+	…or push an existing repository from the command line
+
+	git remote add origin git@github.com:adved85/react-shop-client.git
+	git branch -M main
+	git push -u origin main
+
+
+Now, for the start and stop aur client app,
+we have to start/stop dokcer compose from the root foler (react-shop-client).
+
+	docker compose up
+	docker compose down
+
+@@@@@@@@@@@@@ end of ther first part @@@@@@@@@@@@@@@

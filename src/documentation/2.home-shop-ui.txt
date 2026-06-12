@@ -1,0 +1,147 @@
+abc-shop-2.txt
+==============
+
+https://youtu.be/ehMnQfLyowE?list=PLRB0wzP8AS_GMe_1P-hAZOYjn-a2CdhWA
+
+-== front part ==-
+
+
+making main pages - home & shop 
+	
+	make a new folders in /src
+	/components
+	/components/common
+
+	new files inside components
+	/components
+		Home.jsx
+		Shop.jsx
+
+		Both are functional components, type rafce - react arrow function export component
+		I used VS-code extension named ES7 React/Redux/GraphQL/React-Native snippets
+
+	App.[]
+		-remove all sections & all logos and App.css from from App.jsx
+		-delete App.css, used in App.jsx
+
+	main.[]
+		from the main.jsx remove index.css
+		delete index.css intself
+
+
+	BrowserRouter in App.jsx wraps Routes and 2 Route 
+		- Home element with path="/"
+		- Shop element with path="/shop"
+
+
+
+to add more styles for our new pages, we need css framework or library
+let's intall react-bootstrap package
+
+	open second terminal
+	enter to frontend shell
+		docker compose run --rm frontend sh
+
+
+	installation
+		npm install react-bootstrap bootstrap
+
+	docs of package
+		(react-bootstrap 2.10.10)
+			https://react-bootstrap.github.io/docs/getting-started/introduction
+		(bootstrap 5.3.8)
+			https://getbootstrap.com/docs/5.0/utilities/shadows/
+
+
+	main.[]
+		add bootstrap styles to main.jsx
+			import 'bootstrap/dist/css/bootstrap.min.css'
+
+
+		❗If you see this Error conde on the screen
+❌ [plugin:vite:import-analysis] Failed to resolve import "bootstrap/dist/css/bootstrap.min.css" from "src/main.jsx". Does the file exist?
+
+		It means package names were added to package.json but not installed yet
+		❎🚑 You need to install them inside from "vite_react_dev" container
+			"bootstrap": "^5.3.8",
+			 ---
+			"react-bootstrap": "^2.10.10",
+
+
+		Enter to container:
+			docker exec -it vite_react_dev sh
+
+		Then install them (and show both - (1) normal output + (2) error output)
+			npm install 2>&1
+
+
+https://youtu.be/ehMnQfLyowE?list=PLRB0wzP8AS_GMe_1P-hAZOYjn-a2CdhWA&t=293
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+lets donwload images from aouthors github repo
+https://github.com/phptechlife/react-laravel-ecommerce-snippets
+
+	-> <CODE> -> download zip
+	-> move the zip to the /src/assets/ and extract there into the "CREATED ON THE FLY /images folder"
+
+	now we have 
+		/src/assets/images - with new images + Mens.zip
+
+		unzip also this Mens.zip inside /images - keep Mens folder
+
+
+	now create "css" inside assets, next to the /images folder
+	and add "styles.scss" to that folder
+
+		/src/assets/css/ + styles.scss
+
+		now, copy content of 
+			src/assets/images/snippets.txt
+			to the 
+			src/assets/css/styles.scss
+
+				 ...you will see here...
+				@import DM+Sans from fonts.googleapis.com/
+				$primary-font
+				$primary-white
+
+
+
+	And import styles.scss into main.jsx
+	❗Next you should see this error
+
+❌ [plugin:vite:css] Preprocessor dependency "sass-embedded" not found. Did you install it? Try `npm install -D sass-embedded`.
+
+
+		docker compose run --rm frontend sh
+		npm install -D sass-embedded
+
+
+	So again, enter "vite_react_dev" container and install the package
+		"sass-embedded": "^1.100.0",
+
+		docker exec -it vite_react_dev sh
+		npm install -D sass-embedded
+
+
+NOW your home page should open coccectly - with black header and centerd test "Your Fashion Pertner"
+
+
+Navbar scroll - search this term on the page ---> https://react-bootstrap.netlify.app/docs/components/navbar
+copy all, but keep only navbar, navbar.collapse, nav, nav.link
+import all components ( just copy from the Live Editor)
+
+	replace "me-auto" to "ms-auto" of the <Nav> element, to mive Mens | Womans | Kids to the right
+
+
+	also import into Home.jsx our new logo from the images
+
+
+fonts of Nav + profile icon + cart icon
+https://youtu.be/ehMnQfLyowE?list=PLRB0wzP8AS_GMe_1P-hAZOYjn-a2CdhWA&t=1166
+
+
+R1: #2-1_18) Home-Shop-routes, assets-images-css, bootstrap-sass-styles
+[1st commit of the 2nd lesson, stopped on the 18th minute]
