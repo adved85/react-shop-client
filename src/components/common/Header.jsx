@@ -3,11 +3,12 @@ import React from 'react';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import Logo from '../../assets/images/logo.png';
-import { svgSizes } from '../../constants';
+import { Link } from 'react-router-dom';
 
 // header - icons
 import Profile from '../../assets/images/icons/profile.svg?react';
 import Cart from '../../assets/images/icons/cart.svg?react';
+import { svgSizes } from '../../constants';
 
 const Header = () => {
     return (
@@ -38,9 +39,9 @@ const Header = () => {
                             <a href="" className='ms-3'>
                                 <Profile style={svgSizes} />
                             </a>
-                            <a href="" className='ms-3'>
+                            <Link to="/cart" className="ms-3">
                                 <Cart style={svgSizes} />
-                            </a>
+                            </Link>
                         </div>
                     </Navbar.Collapse>
                 </Navbar>
