@@ -1,12 +1,19 @@
 import React from 'react';
 
 import Layout from './common/Layout';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import ProductImgSix from '../assets/images/Mens/six.jpg';
 import Trash from '../assets/images/icons/trash.svg';
 
 const Cart = () => {
+
+    const navigate = useNavigate();
+
+    const handleCheckout = () => {
+        navigate('/checkout');
+    }; 
+
   return (
     <Layout>
         <div className="container cart-page">
@@ -26,7 +33,7 @@ const Cart = () => {
                 <div className="col-md-12">
                     <h2 className='border-bottom pb-3'>Cart</h2>
 
-                    <table className='table '>
+                    <table className='table'>
                         <tbody>
                             <tr>
                                 <td>
@@ -83,7 +90,12 @@ const Cart = () => {
                             <tr>
                                 <td colSpan={2} className='border-0'>
                                     <div className="d-flex justify-content-end">
-                                        <button className='btn btn-primary my-2'>Proceed to checkout</button>
+                                        <button 
+                                            className='btn btn-primary my-2' 
+                                            onClick={handleCheckout}
+                                        >
+                                            Proceed to checkout
+                                        </button>
                                     </div>
                                 </td>
                             </tr>  
