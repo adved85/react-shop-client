@@ -1,0 +1,362 @@
+---===== BACKEND API INTEGRATION =====---
+@@@@ React + Axios + Toast — Step-by-Step Guide @@@@
+
+
+OVERVIEW
+--------
+This guide documents how to wire a React (Vite) app to a backend REST API.
+It covers: environment config, axios client setup, interceptors,
+endpoint constants, a service layer, and toast notifications for errors.
+
+The pattern used here is a 4-layer chain:
+
+    Component  →  Service  →  API function  →  Axios client  →  Backend
+
+
+-------------------------------------------------------------------
+STEP 1 — INSTALL PACKAGES
+-------------------------------------------------------------------
+
+Enter the running container shell first:
+
+    docker compose run --rm frontend sh
+    OR
+    docker exec -it vite_react_dev sh
+
+Install axios (HTTP client):
+
+    npm install axios
+
+Install react-toastify (toast notifications):
+
+    npm install react-toastify
+
+If you are setting up fresh (packages listed in package.json but not installed):
+
+    npm install
+
+
+-------------------------------------------------------------------
+STEP 2 — ENVIRONMENT FILES
+-------------------------------------------------------------------
+
+Vite reads .env files automatically based on the current mode.
+Create two files at the project root (next to package.json):
+
+> .env.development
+    VITE_API_URL="http://your-api.local/api"
+
+> .env.production
+    VITE_API_URL="https://your-api.com/api"
+
+Rules:
+  - Variables MUST be prefixed with VITE_ or Vite will ignore them.
+  - .env.development is used when running: docker compose up  (dev mode)
+  - .env.production  is used when running: npm run build     (prod build)
+  - Never commit secrets (API keys, passwords) to these files.
+    Add them to .gitignore if needed.
+
+
+-------------------------------------------------------------------
+STEP 3 — CENTRALISE ENV VARS
+-------------------------------------------------------------------
+
+Instead of using import.meta.env.VITE_* directly across the codebase,
+create one config file that owns all env access:
+
+> src/config/env.js
+
+    export const env = {
+        apiUrl: import.meta.env.VITE_API_URL,
+    }
+
+    export const commonErrorCodes = [400, 401, 403, 404, 409, 422, 429];
+    export const retryErrorCodes  = [500, 503];
+
+  commonErrorCodes — errors shown to the user via toast (client errors).
+  retryErrorCodes  — server errors worth retrying automatically.
+
+Why a separate file?
+  - If the env variable name ever changes, you update it in one place.
+  - Error code lists are kept close to the config that uses them.
+
+
+-------------------------------------------------------------------
+STEP 4 — ENDPOINT CONSTANTS
+-------------------------------------------------------------------
+
+Never hardcode URL strings inside components or services.
+Keep all endpoint paths in one file:
+
+> src/api/endpoints.js
+
+    export const ENDPOINTS = {
+        auth: {
+            login:   "/login",
+            logout:  "/logout",
+            refresh: "/refresh",
+            me:      "/me"
+        },
+        adminAuth: {
+            login:    "/admin/login",
+            logout:   "/admin/logout",
+            register: "/admin/register",
+        }
+    }
+
+Add a new group object for each resource (products, orders, users, etc.).
+
+
+-------------------------------------------------------------------
+STEP 5 — AXIOS CLIENT WITH INTERCEPTORS
+-------------------------------------------------------------------
+
+Create the shared axios instance with request/response interceptors:
+
+> src/api/client.js
+
+    import axios from "axios";
+    import { toast } from "react-toastify";
+    import { env, commonErrorCodes, retryErrorCodes } from "../config/env";
+
+    const MAX_RETRIES  = 3;
+    const RETRY_DELAY  = 1000; // ms
+
+    export const api = axios.create({
+        baseURL: env.apiUrl,
+        headers: { "Content-Type": "application/json" },
+    });
+
+--- REQUEST INTERCEPTOR ---
+Runs before every request is sent.
+
+    api.interceptors.request.use(
+        (config) => {
+            const token = localStorage.getItem("token");
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        },
+        (error) => Promise.reject(error)
+    );
+
+  What it does:
+    - Reads the auth token from localStorage.
+    - Attaches it as a Bearer token header automatically.
+      No need to set Authorization manually in every API call.
+
+--- RESPONSE INTERCEPTOR (success path) ---
+Runs after every successful response (2xx status).
+
+    response => {
+        if (response.data && response.data.data) {
+            return response.data.data;  // unwrap nested { data: { data: ... } }
+        }
+        return response.data;           // return flat { data: ... }
+    }
+
+  What it does:
+    - Normalises the response shape so callers always get the payload directly,
+      not the full Axios response object.
+    - Adjust the unwrapping logic to match your API's response envelope.
+
+    Example API envelope this handles:
+        { "success": true, "message": "OK", "data": { ... } }
+
+--- RESPONSE INTERCEPTOR (error path) ---
+Runs after every failed response (non-2xx) or network error.
+
+    async (error) => {
+        const { response } = error;
+
+        if (!response) {
+            toast.error("Network Error: Please, check your internet connection.");
+            return Promise.reject(error);
+        }
+
+        shouldRetrySpecificFailedRequests(error);
+
+        if (commonErrorCodes.includes(response.status)) {
+            toast.error(`Error ${response.status}: ${response.data.message}`);
+        }
+
+        return Promise.reject(error);
+    }
+
+  What it does:
+    - No response at all → network issue → show toast.
+    - 500/503 → retry automatically (see shouldRetry below).
+    - 4xx errors → show the server's message via toast.
+    - Always re-throws the error so components can still react if needed.
+
+--- RETRY HELPER ---
+
+    async function shouldRetrySpecificFailedRequests(error) {
+        const { response, config } = error;
+        if (!config || config._retryCount >= MAX_RETRIES) return;
+        config._retryCount = config._retryCount || 0;
+        if (retryErrorCodes.includes(response.status)) {
+            config._retryCount += 1;
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            return api(config);
+        }
+    }
+
+  What it does:
+    - On 500 or 503, waits RETRY_DELAY ms then replays the original request.
+    - Stops after MAX_RETRIES attempts.
+
+--- RESPONSE UNWRAP HELPER ---
+
+    function extractNestedResponseData(response) {
+        if (response.data && response.data.data) return response.data.data;
+        return response.data;
+    }
+
+
+-------------------------------------------------------------------
+STEP 6 — API FUNCTIONS (per resource)
+-------------------------------------------------------------------
+
+Create one file per resource group. These are thin wrappers — they
+only call the axios instance with the right endpoint and data.
+
+> src/api/adminAuth.js
+
+    import { api }       from "./client";
+    import { ENDPOINTS } from "./endpoints";
+
+    export const login    = (data) => api.post(ENDPOINTS.adminAuth.login,    data);
+    export const register = (data) => api.post(ENDPOINTS.adminAuth.register, data);
+    export const logout   = ()     => api.post(ENDPOINTS.adminAuth.logout);
+
+Add more files as needed: products.js, orders.js, users.js, etc.
+
+Optionally, re-export everything from src/api/index.js as a barrel:
+
+    export * as adminAuthApi from "./adminAuth";
+    export * as productsApi  from "./products";
+
+
+-------------------------------------------------------------------
+STEP 7 — SERVICE LAYER
+-------------------------------------------------------------------
+
+Services sit between components and raw API functions.
+They handle business logic: transforming data, storing tokens, etc.
+Components call services — never API functions directly.
+
+> src/services/authAdmin.service.js
+
+    import * as adminAuthApi from "../api/adminAuth";
+
+    export async function login(credentials) {
+        const response = await adminAuthApi.login(credentials);
+        // e.g. localStorage.setItem("token", response.token);
+        return response;
+    }
+
+    export async function logout() {
+        const response = await adminAuthApi.logout();
+        // e.g. localStorage.removeItem("token");
+        return response;
+    }
+
+    export async function register(params) {
+        const response = await adminAuthApi.register(params);
+        return response;
+    }
+
+Rule: if you need to do something with the response beyond returning it
+(store token, transform data, log an event), do it here — not in the component.
+
+
+-------------------------------------------------------------------
+STEP 8 — TOAST NOTIFICATIONS SETUP
+-------------------------------------------------------------------
+
+Toast needs one global <ToastContainer> rendered in the app.
+Register it once in src/main.jsx — it covers the whole app.
+
+> src/main.jsx
+
+    import { StrictMode } from 'react'
+    import { createRoot } from 'react-dom/client'
+    import { ToastContainer } from 'react-toastify'
+    import App from './App.jsx'
+
+    import 'bootstrap/dist/css/bootstrap.min.css'
+    import 'react-toastify/dist/ReactToastify.css'   // <-- required
+    import './assets/css/styles.scss'
+
+    createRoot(document.getElementById('root')).render(
+        <StrictMode>
+            <App />
+            <ToastContainer position="top-right" autoClose={4000} />
+        </StrictMode>,
+    )
+
+Once registered, call toast from any .js/.jsx file:
+
+    import { toast } from "react-toastify";
+
+    toast("Plain message");
+    toast.success("Saved!");
+    toast.error("Something went wrong.");
+    toast.warn("Check your input.");
+
+
+-------------------------------------------------------------------
+STEP 9 — USING IT IN A COMPONENT
+-------------------------------------------------------------------
+
+> src/components/admin/Login.jsx  (simplified example)
+
+    import { login } from '../../services/authAdmin.service';
+
+    const handleLogin = async (data) => {
+        try {
+            const response = await login(data);
+            // success: redirect or update state
+        } catch {
+            // toast already shown by the interceptor
+            // handle component-level state here (e.g. stop loading spinner)
+        }
+    }
+
+Do I always need try-catch?
+  - For showing an error toast: NO, the interceptor already does it.
+  - For component-level reactions (loading state, redirect on success): YES.
+  - At minimum, add .catch(() => {}) to silence Unhandled Promise Rejection
+    warnings in the console.
+
+
+-------------------------------------------------------------------
+FILE STRUCTURE SUMMARY
+-------------------------------------------------------------------
+
+    src/
+    ├── config/
+    │   └── env.js                  ← env vars + error code lists
+    ├── api/
+    │   ├── client.js               ← axios instance + interceptors
+    │   ├── endpoints.js            ← all URL paths
+    │   ├── adminAuth.js            ← API calls for admin auth resource
+    │   └── index.js                ← (optional) barrel re-exports
+    ├── services/
+    │   └── authAdmin.service.js    ← business logic layer
+    └── components/
+        └── admin/
+            └── Login.jsx           ← component, calls service only
+
+
+-------------------------------------------------------------------
+DOCS & REFERENCES
+-------------------------------------------------------------------
+
+    Axios           https://axios-http.com/docs/intro
+    react-toastify  https://fkhadra.github.io/react-toastify/introduction
+    Vite env vars   https://vite.dev/guide/env-and-mode
+
+@@@@@@@@@@@@@@@@ end of backend API integration guide @@@@@@@@@@@@@@@@
