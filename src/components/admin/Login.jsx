@@ -3,6 +3,8 @@ import Layout from '../common/Layout';
 import { useForm } from "react-hook-form";
 // import { env } from '../../config/env';
 import { login } from '../../services/authAdmin.service';
+import { useNavigate } from "react-router";
+import { useAdmin } from "../context/AdminContext";
 
 import { useState } from "react";
 
@@ -11,6 +13,8 @@ const Login = () => {
 
     const [isLoading, setIsLoading] = useState(false);
 
+    const navigate = useNavigate();
+    const { login: setAdminSession } = useAdmin();
 
     const handleLogin = async (data) => {
         console.log(data);
@@ -19,6 +23,20 @@ const Login = () => {
         try {
             const resposeData = await login(data);
             console.log(resposeData);
+
+            const { token, user: { email, name, id, system_role } } = resposeData;
+
+            const adminData = {
+                token,
+                email,
+                name,
+                id,
+                system_role,
+            };
+
+            localStorage.setItem("adminStorage", JSON.stringify(adminData));
+            setAdminSession(adminData);
+            navigate("/admin/dashboard");
 
         } catch (error) {
             console.error(error);

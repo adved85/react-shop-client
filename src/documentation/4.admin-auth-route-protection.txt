@@ -1,0 +1,254 @@
+---===== ADMIN AUTH & ROUTE PROTECTION =====---
+@@@@ React Context + React Router — Step-by-Step Guide @@@@
+
+
+OVERVIEW
+--------
+This guide documents how the admin area is protected: a shared AdminContext
+holds the logged-in admin, a RequireAdmin wrapper guards private routes, and
+a generic context helper gives clear runtime errors when a hook is used
+outside its provider.
+
+The chain used in this project:
+
+    Login  →  AdminContext (state)  →  RequireAdmin (guard)  →  Protected route
+
+
+-------------------------------------------------------------------
+STEP 1 — THE PROBLEM
+-------------------------------------------------------------------
+
+Two bugs made RequireAdmin fail silently / redirect forever:
+
+  1. AdminContextProvider was never mounted in App.jsx, so
+     useContext(AdminContext) always resolved to the default value (null)
+     and the helper below threw.
+  2. Login.jsx saved the admin to localStorage directly but never updated
+     the context state, so RequireAdmin never found out the user had
+     logged in.
+
+Both are fixed below.
+
+
+-------------------------------------------------------------------
+STEP 2 — GENERIC CONTEXT HELPER
+-------------------------------------------------------------------
+
+One helper is shared by every context hook (useAdmin, useTheme, ...).
+It throws a SPECIFIC error naming both the hook and the provider, instead
+of a generic message.
+
+> src/components/context/contextHelpers.js
+
+    import { useContext } from "react";
+
+    export function getContext(ctx, hookName, providerName) {
+        const context = useContext(ctx);
+        if (!context) {
+            throw new Error(`${hookName} must be used within a ${providerName}`);
+        }
+        return context;
+    }
+
+Each hook passes its own name + provider name:
+
+    export function useAdmin() {
+        return getContext(AdminContext, "useAdmin", "AdminContextProvider");
+    }
+
+  Why this matters:
+    - Without it, forgetting to mount a provider fails with a vague error
+      (or a crash further down the tree) instead of pointing straight at
+      the missing provider.
+
+
+-------------------------------------------------------------------
+STEP 3 — ADMIN CONTEXT + PROVIDER
+-------------------------------------------------------------------
+
+Holds the logged-in admin and exposes login / logout. Persists across
+reloads via localStorage.
+
+> src/components/context/AdminContext.jsx
+
+    import { createContext, useState } from "react";
+    import { getContext } from "./contextHelpers";
+
+    export const AdminContext = createContext(null);
+
+    export const AdminContextProvider = ({ children }) => {
+        const adminStorage = localStorage.getItem("adminStorage");
+        const [admin, setAdmin] = useState(adminStorage ? JSON.parse(adminStorage) : null);
+
+        const login = (admin) => {
+            setAdmin(admin);
+        };
+        const logout = () => {
+            localStorage.removeItem("adminStorage");
+            setAdmin(null);
+        };
+
+        return (
+            <AdminContext.Provider value={{ admin, login, logout }}>
+                {children}
+            </AdminContext.Provider>
+        );
+    };
+
+    export function useAdmin() {
+        return getContext(AdminContext, "useAdmin", "AdminContextProvider");
+    }
+
+  Key point:
+    localStorage.getItem always returns a STRING, so it must be
+    JSON.parse'd before going into state — otherwise `admin` is a truthy
+    string forever and logout / re-render checks behave oddly.
+
+
+-------------------------------------------------------------------
+STEP 4 — ROUTE GUARD
+-------------------------------------------------------------------
+
+Reads `admin` from context; redirects to login if there isn't one.
+
+> src/components/context/RequireAdmin.jsx
+
+    import { Navigate } from "react-router-dom";
+    import { useAdmin } from "./AdminContext";
+
+    export const RequireAdmin = ({ children }) => {
+        const { admin } = useAdmin();
+
+        if (!admin) {
+            return <Navigate to="/admin/login" />;
+        }
+
+        return children;
+    };
+
+This only works if AdminContextProvider is an ANCESTOR of wherever
+RequireAdmin is rendered — see next step.
+
+
+-------------------------------------------------------------------
+STEP 5 — REGISTERING THE PROVIDER
+-------------------------------------------------------------------
+
+AdminContextProvider wraps the router so every route (not just the
+protected ones) can call useAdmin() if needed, and so RequireAdmin has a
+provider to read from.
+
+> src/App.jsx
+
+    import { AdminContextProvider } from './components/context/AdminContext';
+    import { RequireAdmin } from './components/context/RequireAdmin';
+
+    function App() {
+      return (
+        <AdminContextProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* ...public routes... */}
+
+              <Route path="admin/login" element={<Login />} />
+
+              <Route
+                path="admin/dashboard"
+                element={
+                  <RequireAdmin>
+                    <Dashboard />
+                  </RequireAdmin>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </AdminContextProvider>
+      );
+    }
+
+  Rule of thumb:
+    A context provider must sit ABOVE every component (guard, page, or
+    hook) that consumes it in the tree.
+
+
+-------------------------------------------------------------------
+STEP 6 — SYNCING LOGIN WITH CONTEXT
+-------------------------------------------------------------------
+
+Login.jsx must update BOTH localStorage (for persistence across reloads)
+AND the context (for the current render tree to know immediately).
+
+> src/components/admin/Login.jsx
+
+    import { useAdmin } from "../context/AdminContext";
+
+    const Login = () => {
+        const navigate = useNavigate();
+        const { login: setAdminSession } = useAdmin();
+
+        const handleLogin = async (data) => {
+            const resposeData = await login(data);
+            const { token, user: { email, name, id, system_role } } = resposeData;
+
+            const adminData = { token, email, name, id, system_role };
+
+            localStorage.setItem("adminStorage", JSON.stringify(adminData));
+            setAdminSession(adminData);   // <-- updates AdminContext state
+            navigate("/admin/dashboard");
+        };
+        // ...
+    };
+
+Without the setAdminSession(adminData) call, `admin` in context stays
+null even after a successful login, and RequireAdmin bounces the user
+straight back.
+
+
+-------------------------------------------------------------------
+STEP 7 — SAME PATTERN FOR OTHER CONTEXTS
+-------------------------------------------------------------------
+
+ThemeContext reuses the exact same getContext helper, so it gets the
+same clear error message for free:
+
+> src/components/context/ThemeContext.jsx
+
+    export function useTheme() {
+        return getContext(ThemeContext, "useTheme", "ThemeProvider");
+    }
+
+Any future context (CartContext, UserContext, ...) should follow this
+pattern:
+
+    1. createContext(null)
+    2. A *Provider component owning state
+    3. A use* hook calling getContext(Context, "useX", "XProvider")
+    4. Mount the provider ABOVE every consumer in App.jsx
+
+
+-------------------------------------------------------------------
+FILE STRUCTURE SUMMARY
+-------------------------------------------------------------------
+
+    src/
+    ├── App.jsx                              ← mounts AdminContextProvider, defines routes
+    └── components/
+        ├── admin/
+        │   ├── Login.jsx                    ← calls login() from useAdmin() on success
+        │   └── Dashboard.jsx                ← protected page
+        └── context/
+            ├── contextHelpers.js            ← shared getContext(ctx, hookName, providerName)
+            ├── AdminContext.jsx             ← AdminContext, AdminContextProvider, useAdmin
+            ├── ThemeContext.jsx             ← ThemeContext, ThemeProvider, useTheme
+            └── RequireAdmin.jsx             ← route guard, redirects to /admin/login
+
+
+-------------------------------------------------------------------
+DOCS & REFERENCES
+-------------------------------------------------------------------
+
+    React Context                        https://react.dev/reference/react/createContext
+    React Router — <Navigate>            https://reactrouter.com/en/main/components/navigate
+    React Router — protected routes      https://reactrouter.com/en/main/start/tutorial#authentication
+
+@@@@@@@@@@@@@@@@ end of admin auth & route protection guide @@@@@@@@@@@@@@@@
