@@ -8,6 +8,9 @@ import Checkout from './components/Checkout';
 import Login from './components/admin/Login';
 import Dashboard from './components/admin/Dashboard';
 
+import DashboardContent from './components/admin/content/DashboardContent';
+import CategoriesContent from './components/admin/content/CategoriesContent'
+
 import { RequireAdmin } from './components/context/RequireAdmin';
 import { AdminContextProvider } from './components/context/AdminContext';
 
@@ -27,11 +30,15 @@ function App() {
 
             <Route path="admin/login" element={<Login />} />
 
-            <Route path="admin/dashboard" element={
+            <Route path="/admin" element={
               <RequireAdmin>
                 <Dashboard />
               </RequireAdmin>
-            } />
+            } >
+              <Route index element={<DashboardContent />} />
+              <Route path="dashboard" element={<DashboardContent />} />
+              <Route path="categories" element={<CategoriesContent />} />
+            </Route>
 
           </Routes>
         </BrowserRouter>
