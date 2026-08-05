@@ -1,9 +1,16 @@
 import axios from "axios";
 import { toast } from "react-toastify";
 import { env, commonErrorCodes, retryErrorCodes } from "../config/env";
+import { ENDPOINTS } from "./endpoints";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
+const ADMIN_AUTH_ENDPOINTS = Object.values(ENDPOINTS.adminAuth);
+
+function getAdminToken() {
+    const adminStorage = localStorage.getItem("adminStorage");
+    return adminStorage ? JSON.parse(adminStorage).token : null;
+}
 
 export const api = axios.create({
     baseURL: env.apiUrl,
@@ -14,7 +21,7 @@ export const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("token");
+        const token = getAdminToken();
 
         // set header
         if (token) {
@@ -57,16 +64,16 @@ api.interceptors.response.use(
         // return response;
     },
     async (error) => {
-        // if (error.response?.status === 401) {}
-        // refresh token
-        // logout
-        // redirect
-
-        const { response, message } = error;
+        const { response, config } = error;
 
         if (!response) {
             toast.error("Network Error: Please, check your internet connection.");
             return Promise.reject(error); // pass error to .catch()
+        }
+
+        if (response.status === 401 && !ADMIN_AUTH_ENDPOINTS.includes(config?.url)) {
+            localStorage.removeItem("adminStorage");
+            window.location.href = "/admin/login";
         }
 
         shouldRetrySpecificFailedRequests(error);

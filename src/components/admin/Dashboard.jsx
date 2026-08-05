@@ -1,15 +1,27 @@
 import React from "react";
-import { useAdmin } from "../context/AdminContext";
+import Layout from "../common/Layout";
+import Sidebar from "../common/Sidebar";
+// import DashboardContent from "./DashboardContent";
+import {Outlet} from "react-router-dom";
 
 const Dashboard = () => {
 
-  const { logout } = useAdmin();
-
   return (
-    <div>
-      Here is Dashboard!
-      <button className="btn btn-secondary" onClick={logout}>Logout</button>
-    </div>
+    <Layout>
+      <div className="container">
+        <div className="row">
+          <div className="d-flex justify-content-between mt-5 pb-3">
+            <h4 className="h4 pb-0 mb-0">Dashboard</h4>
+          </div>
+          <div className="col-md-3">
+            <Sidebar />
+          </div>
+          <div className="col-md-9">
+            <Outlet/>
+          </div>
+        </div>
+      </div>
+    </Layout>
   )
 }
 

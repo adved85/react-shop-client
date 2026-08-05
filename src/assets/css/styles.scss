@@ -177,6 +177,22 @@ ul{
     }
 }
 
+.sidebar {
+    ul {
+        li {
+            border-bottom: 1px solid rgb(47 72 88 / 20%);
+            margin-bottom: 2px;
+            a {
+                display: block;
+                padding: 10px 10px;
+                color: $primary-black;
+                &:hover {
+                    color: $primary-color;
+                }
+            }
+        }
+    }
+}
 
 footer {
     background-color: $tertiary-color;

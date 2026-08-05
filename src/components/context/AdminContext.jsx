@@ -1,5 +1,6 @@
 import { createContext, useState } from "react";
 import { getContext } from "./contextHelpers";
+import { logout as logoutAdminApi } from "../../services/authAdmin.service";
 
 // admin context + provider
 export const AdminContext = createContext(null);
@@ -11,9 +12,15 @@ export const AdminContextProvider = ({children}) => {
     const login = (admin) => {
         setAdmin(admin)
     }
-    const logout = () => {
-        localStorage.removeItem("adminStorage");
-        setAdmin(null);
+    const logout = async () => {
+        try {
+            await logoutAdminApi();
+        } catch (error) {
+            console.error("Logout request failed:", error);
+        } finally {
+            localStorage.removeItem("adminStorage");
+            setAdmin(null);
+        }
     }
 
     return <AdminContext.Provider value={{admin, login, logout}}>
