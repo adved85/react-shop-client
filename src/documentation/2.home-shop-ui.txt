@@ -8,7 +8,7 @@ https://youtu.be/ehMnQfLyowE?list=PLRB0wzP8AS_GMe_1P-hAZOYjn-a2CdhWA
 
 making main pages - home & shop 
 	
-	make a new folders in /src
+	make new folders in /src
 	/components
 	/components/common
 
@@ -21,22 +21,22 @@ making main pages - home & shop
 		I used VS-code extension named ES7 React/Redux/GraphQL/React-Native snippets
 
 	App.[]
-		-remove all sections & all logos and App.css from from App.jsx
+		-remove all sections & all logos and App.css from App.jsx
 		-delete App.css, used in App.jsx
 
 	main.[]
 		from the main.jsx remove index.css
-		delete index.css intself
+		delete index.css itself
 
 
-	BrowserRouter in App.jsx wraps Routes and 2 Route 
+	BrowserRouter in App.jsx wraps Routes and 2 Routes
 		- Home element with path="/"
 		- Shop element with path="/shop"
 
 
 
-to add more styles for our new pages, we need css framework or library
-let's intall react-bootstrap package
+to add more styles for our new pages, we need a css framework or library
+let's install the react-bootstrap package
 
 	open second terminal
 	enter to frontend shell
@@ -58,7 +58,7 @@ let's intall react-bootstrap package
 			import 'bootstrap/dist/css/bootstrap.min.css'
 
 
-		❗If you see this Error conde on the screen
+		❗If you see this Error code on the screen
 ❌ [plugin:vite:import-analysis] Failed to resolve import "bootstrap/dist/css/bootstrap.min.css" from "src/main.jsx". Does the file exist?
 
 		It means package names were added to package.json but not installed yet
@@ -80,7 +80,7 @@ https://youtu.be/ehMnQfLyowE?list=PLRB0wzP8AS_GMe_1P-hAZOYjn-a2CdhWA&t=293
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
-lets donwload images from aouthors github repo
+let's download images from the author's GitHub repo
 https://github.com/phptechlife/react-laravel-ecommerce-snippets
 
 	-> <CODE> -> download zip
@@ -89,7 +89,7 @@ https://github.com/phptechlife/react-laravel-ecommerce-snippets
 	now we have 
 		/src/assets/images - with new images + Mens.zip
 
-		unzip also this Mens.zip inside /images - keep Mens folder
+		also unzip this Mens.zip inside /images - keep the Mens folder
 
 
 	now create "css" inside assets, next to the /images folder
@@ -126,14 +126,14 @@ https://github.com/phptechlife/react-laravel-ecommerce-snippets
 		npm install -D sass-embedded
 
 
-NOW your home page should open coccectly - with black header and centerd test "Your Fashion Pertner"
+NOW your home page should open correctly - with black header and centered text "Your Fashion Partner"
 
 
 Navbar scroll - search this term on the page ---> https://react-bootstrap.netlify.app/docs/components/navbar
 copy all, but keep only navbar, navbar.collapse, nav, nav.link
 import all components ( just copy from the Live Editor)
 
-	replace "me-auto" to "ms-auto" of the <Nav> element, to mive Mens | Womans | Kids to the right
+	replace "me-auto" with "ms-auto" on the <Nav> element, to move Mens | Womans | Kids to the right
 
 
 	also import into Home.jsx our new logo from the images
