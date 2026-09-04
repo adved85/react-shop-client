@@ -1,0 +1,85 @@
+#
+# Builds and pushes the client image to GHCR. Deliberately separate from ci.yml
+# (fast checks vs. slow image build are different concerns) and triggered by
+# version tags rather than every push to main, since shop-infrastructure pins a
+# specific ${FRONTEND_VERSION} tag rather than tracking a floating `latest`.
+
+name: Publish Docker image
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # A tag can point at any commit, so nothing otherwise guarantees a release was
+  # tested. Calling ci.yml reuses its exact lint, test and image-verification
+  # jobs; the image it builds warms the shared gha layer cache, so the push
+  # below reuses those layers rather than rebuilding from scratch.
+  verify:
+    name: Verify
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    name: Build and push image
+    needs: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The bundle bakes this in at build time, so an unset variable would ship
+      # a released image that talks to no API at all — fail before publishing.
+      - name: Require VITE_API_URL
+        run: |
+          if [ -z "${{ vars.VITE_API_URL }}" ]; then
+            echo "Repository variable VITE_API_URL is not set (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # `latest` is added automatically by the default `latest=auto` flavor,
+          # which — unlike a raw always-on latest tag — skips pre-releases, so
+          # tagging v2.0.0-rc1 will not move `latest` off the current stable
+          # release.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=,enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_VERSION=${{ needs.verify.outputs.node-tag }}
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

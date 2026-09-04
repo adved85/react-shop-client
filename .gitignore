@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Baked into the image via the VITE_API_URL build arg (see Dockerfile and
+# docker-publish.yml) instead of a committed file.
+.env.production
+src/planing/workflow-and-dockerfile.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -3,3 +3,11 @@ dist
 .git
 .gitignore
 docker-compose.yml
+.github
+tests
+.env
+.env.development
+.env.production
+README.md
+src/documentation
+src/planing
