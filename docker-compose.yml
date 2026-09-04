@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: node:25-alpine
+    image: node:${NODE_VERSION}
     container_name: vite_react_dev
     working_dir: /app
     volumes:

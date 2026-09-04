@@ -1,0 +1,144 @@
+name: React Vite CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  # Lets docker-publish.yml gate a release on this exact pipeline instead of
+  # redefining the checks there, which would let the two drift apart.
+  workflow_call:
+    outputs:
+      node-tag:
+        description: Node base image tag resolved from .env
+        value: ${{ jobs.setup.outputs.node-tag }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # .env is the single source for the Node version, but it is needed in two
+  # shapes: docker-compose.yml and the Dockerfile want the image tag
+  # (25-alpine), setup-node wants the bare major (25). Deriving both here
+  # keeps a second copy from drifting.
+  setup:
+    name: Resolve Node version
+    runs-on: ubuntu-latest
+
+    outputs:
+      node-tag: ${{ steps.node.outputs.tag }}
+      node-version: ${{ steps.node.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read NODE_VERSION from .env
+        id: node
+        run: |
+          tag=$(grep '^NODE_VERSION=' .env | cut -d= -f2 | tr -d '"')
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${tag%-*}" >> "$GITHUB_OUTPUT"
+
+  lint:
+    name: Lint code
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  test:
+    name: Run tests
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  # Catches Dockerfile and nginx breakage on every push rather than at release
+  # time, when docker-publish.yml would otherwise be the first thing to build
+  # the image.
+  docker-build:
+    name: Build Docker image
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: react-shop-client:ci
+          build-args: NODE_VERSION=${{ needs.setup.outputs.node-tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify nginx serves the built bundle and SPA routes
+        run: |
+          docker run -d --name smoke -p 8080:80 react-shop-client:ci
+
+          for _ in $(seq 1 15); do
+            curl -fsS http://localhost:8080/ > /dev/null && break
+            sleep 1
+          done
+
+          if ! curl -fsS http://localhost:8080/ | grep -q 'id="root"'; then
+            docker logs smoke
+            docker rm -f smoke
+            echo "index.html was not served"
+            exit 1
+          fi
+
+          # A deep link must fall through to index.html, otherwise React Router
+          # routes 404 on hard reload.
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/admin/dashboard)
+          docker rm -f smoke
+
+          if [ "$status" != "200" ]; then
+            echo "SPA fallback missing: /admin/dashboard returned ${status}"
+            exit 1
+          fi
+
+          echo "nginx serves index.html and falls back for client-side routes."

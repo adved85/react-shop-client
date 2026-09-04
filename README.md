@@ -9,7 +9,7 @@ Bootstrapped from the [react-vite-app](https://github.com/adved85/react-vite-app
 This is **not a monolith** — it's a client-only React SPA. All data (products, categories, orders, auth, ...) is served by a separate backend API:
 
 - Backend: [laravel-shop-api](https://github.com/adved85/laravel-shop-api) (Laravel + Sanctum)
-- Communication: REST over Axios, base URL set via `VITE_API_URL` (see `.env.development` / `.env.production`)
+- Communication: REST over Axios, base URL set via `VITE_API_URL` — from `.env.development` in dev, and from a build arg baked into the image at build time for releases (see [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md))
 - Auth: Sanctum token issued by the API, stored client-side and attached as a `Bearer` header by an Axios interceptor
 
 ```
@@ -40,6 +40,24 @@ npm test        # vitest, see src/documentation/6.testing-and-lint.md
 npm run lint
 ```
 
+## Production image
+
+`docker compose up` above is the **dev** setup (Vite dev server with HMR). For production the app ships as a container image — Node builds the bundle, nginx serves it — published to GHCR on version tags and pulled by the infra repo:
+
+```yaml
+frontend:
+  image: ghcr.io/adved85/react-shop-client:${FRONTEND_VERSION}
+```
+
+Cut a release by pushing a tag (`git tag v0.1.0 && git push origin v0.1.0`); CI runs lint, tests and an image smoke test before publishing. Build it locally with:
+
+```sh
+docker build --build-arg VITE_API_URL="https://your-api/api" -t react-shop-client:local .
+docker run --rm -p 8099:80 react-shop-client:local
+```
+
+Full details in [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md).
+
 ## How this was built
 
 The app was built up in layers, each one documented in [src/documentation/](src/documentation/) and mirrored by a corresponding git branch/PR. The layers build on each other, so read the docs in this order:
@@ -54,6 +72,7 @@ The app was built up in layers, each one documented in [src/documentation/](src/
 | 6 | Admin auth & route protection — `AdminContext`, `RequireAdmin` guard | [4.admin-auth-route-protection.txt](src/documentation/4.admin-auth-route-protection.txt) | [R4-2](https://github.com/adved85/react-shop-client/tree/R4-2) |
 | 7 | Admin dashboard navigation & auth hardening — sidebar routing, nested routes, 401 handling, server-side logout | [5.admin-dashboard-navigation-and-auth-hardening.txt](src/documentation/5.admin-dashboard-navigation-and-auth-hardening.txt) | [R5](https://github.com/adved85/react-shop-client/tree/R5) |
 | 8 | Testing & lint — Vitest + jsdom, `tests/` mirroring `src/`, axios interceptor and service-layer coverage | [6.testing-and-lint.md](src/documentation/6.testing-and-lint.md) | [L7](https://github.com/adved85/react-shop-client/tree/L7) |
+| 9 | Docker image, CI & releases — multi-stage build, nginx runtime, GitHub Actions, GHCR publishing | [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md) + [line-by-line](src/documentation/docker_image_and_pipelines/) | [L8](https://github.com/adved85/react-shop-client/tree/L8) |
 
 Each doc explains the *why* behind that step (bugs it fixed, decisions made), not just the *what* — check them before touching related code.
 
@@ -76,4 +95,8 @@ tests/               ← mirrors src/; tests/api/client.test.js covers src/api/c
 ├── setup.js          ← in-memory localStorage for Node 25 + jsdom
 ├── api/
 └── services/
+
+Dockerfile           ← multi-stage: node builds the bundle, nginx serves it
+docker/nginx/        ← the runtime nginx config (SPA fallback, gzip, caching)
+.github/workflows/   ← ci.yml (lint, test, image smoke test) + docker-publish.yml (GHCR)
 ```
