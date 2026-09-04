@@ -32,6 +32,14 @@ docker compose down
 
 See [src/documentation/1.create-config.txt](src/documentation/1.create-config.txt) for full first-time setup (installing packages, container shell access, etc.).
 
+Run the test suite and the linter from inside the container — there is no Node.js on the host:
+
+```sh
+docker compose run --rm frontend sh
+npm test        # vitest, see src/documentation/6.testing-and-lint.md
+npm run lint
+```
+
 ## How this was built
 
 The app was built up in layers, each one documented in [src/documentation/](src/documentation/) and mirrored by a corresponding git branch/PR. The layers build on each other, so read the docs in this order:
@@ -45,6 +53,7 @@ The app was built up in layers, each one documented in [src/documentation/](src/
 | 5 | Backend API integration — Axios client, interceptors, env config, service layer, toast notifications | [3.backend-api-integration.md](src/documentation/3.backend-api-integration.md) | [R4](https://github.com/adved85/react-shop-client/tree/R4) |
 | 6 | Admin auth & route protection — `AdminContext`, `RequireAdmin` guard | [4.admin-auth-route-protection.txt](src/documentation/4.admin-auth-route-protection.txt) | [R4-2](https://github.com/adved85/react-shop-client/tree/R4-2) |
 | 7 | Admin dashboard navigation & auth hardening — sidebar routing, nested routes, 401 handling, server-side logout | [5.admin-dashboard-navigation-and-auth-hardening.txt](src/documentation/5.admin-dashboard-navigation-and-auth-hardening.txt) | [R5](https://github.com/adved85/react-shop-client/tree/R5) |
+| 8 | Testing & lint — Vitest + jsdom, `tests/` mirroring `src/`, axios interceptor and service-layer coverage | [6.testing-and-lint.md](src/documentation/6.testing-and-lint.md) | [L7](https://github.com/adved85/react-shop-client/tree/L7) |
 
 Each doc explains the *why* behind that step (bugs it fixed, decisions made), not just the *what* — check them before touching related code.
 
@@ -62,4 +71,9 @@ src/
 │   └── hooks/        ← shared hooks
 ├── assets/          ← images, Sass styles
 └── documentation/    ← build log, one file per layer (see table above)
+
+tests/               ← mirrors src/; tests/api/client.test.js covers src/api/client.js
+├── setup.js          ← in-memory localStorage for Node 25 + jsdom
+├── api/
+└── services/
 ```
