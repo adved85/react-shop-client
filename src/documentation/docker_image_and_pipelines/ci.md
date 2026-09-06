@@ -205,7 +205,7 @@ Installs Node **25** — the bare version resolved in section 4.
 
 `npm ci` — a clean, lock-file-exact install (see [`react_dockerfile.md`](react_dockerfile.md), section 5).
 
-⚠️ **Known state:** this job currently **fails** — 27 pre-existing ESLint errors in application code that predate this pipeline (unused `React` imports, react-refresh rules, one rules-of-hooks violation). A separate "lint fixes" branch clears them. Red here is expected, not a regression.
+**History:** the first run of this job failed on 27 pre-existing ESLint errors in application code that predated the pipeline (unused `React` imports, react-refresh rules, one rules-of-hooks violation). A follow-up "lint fixes" branch cleared them — see [`../6.testing-and-lint.md`](../6.testing-and-lint.md), Step 8. The job is green now.
 
 ---
 

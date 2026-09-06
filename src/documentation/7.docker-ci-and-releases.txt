@@ -361,9 +361,10 @@ STEP 5 — ci.yml (FAST CHECKS)
   the job proves the image builds and serves, not that it talks to a backend.
   Only docker-publish.yml passes the real value.
 
-  ⚠ KNOWN STATE: the lint job currently fails — 27 pre-existing ESLint errors
-    in app code, unrelated to this layer (see guide 6, Step 8). A separate
-    "lint fixes" branch clears them.
+  Note: when this pipeline first ran, the lint job failed on 27 pre-existing
+  ESLint errors in app code that predated it — the image and test jobs were
+  green. A follow-up "lint fixes" branch cleared them (see guide 6, Step 8);
+  all four jobs pass now.
 
 
 -------------------------------------------------------------------

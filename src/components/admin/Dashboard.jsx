@@ -1,4 +1,3 @@
-import React from "react";
 import Layout from "../common/Layout";
 import Sidebar from "../common/Sidebar";
 // import DashboardContent from "./DashboardContent";

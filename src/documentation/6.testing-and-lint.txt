@@ -34,6 +34,49 @@ container:
     docker compose run --rm frontend sh
     npm install -D vitest jsdom
 
+  ❗THEN INSTALL THEM AGAIN INSIDE THE *RUNNING* CONTAINER
+
+    Enter the container:
+        docker exec -it vite_react_dev sh
+
+    Then install them there:
+        npm install -D vitest jsdom
+
+    This is not a typo — it is the same trap as bootstrap/sass in guide 2.
+    Skip it and the dev server keeps failing with something like:
+
+❌ Failed to resolve import "vitest" — Cannot find package 'vitest'
+
+    WHY IT HAPPENS
+      Look at the two volumes in docker-compose.yml:
+
+          volumes:
+            - .:/app             # bind mount → your real project folder
+            - /app/node_modules  # anonymous volume → private to each container
+
+      `docker compose run --rm frontend` starts a SEPARATE, THROWAWAY
+      container — not the vite_react_dev one serving your app. So the install
+      splits in two directions:
+
+          package.json + package-lock.json
+              → written through the bind mount to your real folder
+              → ✅ survives
+
+          node_modules/vitest, node_modules/jsdom
+              → written into that temp container's own node_modules volume
+              → ❌ deleted together with the container by --rm
+
+      The result is the confusing half-state: the package NAMES are in
+      package.json, but the CODE is missing from the container actually
+      running Vite — which still has the node_modules volume it was created
+      with.
+
+      Running npm install inside vite_react_dev fills that container's own
+      volume from the now-updated package.json. Restarting the stack does the
+      same thing, since the compose command is `npm install && npm run dev`:
+
+          docker compose down && docker compose up
+
 Or as a one-off, without the compose service:
 
     docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp \
@@ -292,20 +335,67 @@ it / expect / vi explicitly from "vitest" rather than relying on Vitest's
 
     npm run lint
 
-  ⚠ KNOWN STATE: `npm run lint` currently reports 27 errors in 20 files, all
-    of them pre-existing app code, none from the test setup:
+  Lint is CLEAN — 0 errors. It was not always: when the test setup landed,
+  `npm run lint` reported 27 errors in 20 files, all of them pre-existing app
+  code and none from the tests. A follow-up "lint fixes" branch cleared them:
 
-      22 × no-unused-vars                    — unused `React` imports (React 19
-                                               does not need them with the new
-                                               JSX transform)
+      22 × no-unused-vars                    — unused `React` imports and
+                                               leftover scaffold variables;
+                                               removed, since React 19's JSX
+                                               transform needs no import
        4 × react-refresh/only-export-components — context files exporting both a
-                                               context/hook and a component
+                                               context/hook and a component;
+                                               split into XContext.js (context
+                                               + hook) and XProvider.jsx
        1 × react-hooks/rules-of-hooks        — getContext() in contextHelpers.js
-                                               calls useContext but is not named
-                                               use*
+                                               called useContext without a use*
+                                               name; renamed useSafeContext
 
-    These are scheduled for a separate "lint fixes" branch. Until then the
-    lint job in CI (guide 7) fails red — this is known, not a regression.
+    See guide 4 for the resulting context layout.
+
+  WHY `import React` WAS REMOVABLE
+
+    JSX is not JavaScript — a compiler rewrites it. WHICH function it
+    rewrites to is the whole story:
+
+        const Demo = () => <div className="card">Hello</div>;
+
+      classic transform (React <= 16)
+        const Demo = () => React.createElement("div", {className:"card"}, "Hello");
+                           ^^^^^ identifier is in the output, so React had
+                                 to be imported in every file
+
+      automatic transform (React 17+, what this project uses)
+        import { jsx as _jsx } from "react/jsx-runtime";   <- compiler adds this
+        const Demo = () => _jsx("div", {className:"card", children:"Hello"});
+
+    @vitejs/plugin-react uses the automatic runtime by default, so it is
+    already on here — nothing to configure. That is why
+    `import React from 'react'` was not merely redundant but a genuinely
+    UNUSED VARIABLE, and why ESLint was right to flag all 16 of them.
+
+    You still import from "react" anything you actually reference —
+    useState, createContext, memo — as NAMED imports. A default React import
+    is only needed for namespace access such as React.Children, or React.FC
+    in TypeScript.
+
+    (<>...</> also works without importing Fragment, for the same reason:
+     it comes from that same auto-imported runtime.)
+
+  WHY THE CONTEXT FILES WERE SPLIT
+  — react-refresh/only-export-components
+
+    Fast Refresh swaps an edited component into the running dev page WHILE
+    KEEPING APPLICATION STATE — edit the dashboard and you stay logged in.
+    It can only do that when a file exports NOTHING BUT COMPONENTS. A file
+    that also exports a context object or a hook cannot be hot-swapped
+    safely, so Vite falls back to a FULL PAGE RELOAD, wiping the state you
+    were testing.
+
+    So AdminContext.jsx became AdminContext.js (context + hook) plus
+    AdminContextProvider.jsx (component), and ThemeContext.jsx likewise.
+    See guide 4, Step 7, for the resulting layout and how import paths
+    stayed almost unchanged.
 
 
 -------------------------------------------------------------------

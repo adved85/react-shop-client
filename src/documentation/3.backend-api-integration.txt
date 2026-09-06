@@ -56,6 +56,13 @@ Rules:
   - Never commit secrets (API keys, passwords) to these files.
     Add them to .gitignore if needed.
 
+  ❗CHANGED SINCE THIS LAYER WAS WRITTEN
+    .env.production is now GITIGNORED AND NOT USED FOR RELEASES. Because Vite
+    inlines VITE_* values into the bundle at build time, the production URL is
+    passed as a Docker BUILD ARG fed by a GitHub repository variable — see
+    guide 7, Step 1. .env.development is unchanged and still what you edit
+    for local work.
+
 
 -------------------------------------------------------------------
 STEP 3 — CENTRALISE ENV VARS
@@ -129,6 +136,12 @@ Create the shared axios instance with request/response interceptors:
 
 --- REQUEST INTERCEPTOR ---
 Runs before every request is sent.
+
+  ⚠ THIS SNIPPET CONTAINS A BUG THAT WAS FIXED LATER
+    Nothing ever wrote a "token" key — Login.jsx stores the token nested
+    inside an "adminStorage" blob, so the Authorization header was never
+    actually sent. The fix (a getAdminToken() helper) is in guide 5, Step 4.
+    Kept here as written so the fix has something to refer back to.
 
     api.interceptors.request.use(
         (config) => {

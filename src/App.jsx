@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './components/Home';
 import Shop from './components/Shop';
@@ -12,11 +11,9 @@ import DashboardContent from './components/admin/content/DashboardContent';
 import CategoriesContent from './components/admin/content/CategoriesContent'
 
 import { RequireAdmin } from './components/context/RequireAdmin';
-import { AdminContextProvider } from './components/context/AdminContext';
+import { AdminContextProvider } from './components/context/AdminContextProvider';
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <>
       <AdminContextProvider>

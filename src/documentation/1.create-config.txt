@@ -70,4 +70,9 @@ we have to start/stop docker compose from the root folder (react-shop-client).
 	docker compose up
 	docker compose down
 
+	❗Added later: the Node version is no longer hardcoded in
+	docker-compose.yml. It reads image: node:${NODE_VERSION} from the .env
+	file at the project root (NODE_VERSION="25-alpine"), which is the same
+	single source the Dockerfile and CI use — see guide 7, Step 4.
+
 @@@@@@@@@@@@@ end of the first part @@@@@@@@@@@@@@@

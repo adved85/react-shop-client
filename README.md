@@ -69,8 +69,8 @@ The app was built up in layers, each one documented in [src/documentation/](src/
 | 3 | Product listing polish — Swiper carousel, SVG icons, `Home` decomposed into common components | *(no write-up yet)* | [R2](https://github.com/adved85/react-shop-client/tree/R2) |
 | 4 | Product / Cart / Checkout pages — markup | *(no write-up yet)* | [R3](https://github.com/adved85/react-shop-client/tree/R3) |
 | 5 | Backend API integration — Axios client, interceptors, env config, service layer, toast notifications | [3.backend-api-integration.md](src/documentation/3.backend-api-integration.md) | [R4](https://github.com/adved85/react-shop-client/tree/R4) |
-| 6 | Admin auth & route protection — `AdminContext`, `RequireAdmin` guard | [4.admin-auth-route-protection.txt](src/documentation/4.admin-auth-route-protection.txt) | [R4-2](https://github.com/adved85/react-shop-client/tree/R4-2) |
-| 7 | Admin dashboard navigation & auth hardening — sidebar routing, nested routes, 401 handling, server-side logout | [5.admin-dashboard-navigation-and-auth-hardening.txt](src/documentation/5.admin-dashboard-navigation-and-auth-hardening.txt) | [R5](https://github.com/adved85/react-shop-client/tree/R5) |
+| 6 | Admin auth & route protection — `AdminContext`, `RequireAdmin` guard | [4.admin-auth-route-protection.md](src/documentation/4.admin-auth-route-protection.md) | [R4-2](https://github.com/adved85/react-shop-client/tree/R4-2) |
+| 7 | Admin dashboard navigation & auth hardening — sidebar routing, nested routes, 401 handling, server-side logout | [5.admin-dashboard-navigation-and-auth-hardening.md](src/documentation/5.admin-dashboard-navigation-and-auth-hardening.md) | [R5](https://github.com/adved85/react-shop-client/tree/R5) |
 | 8 | Testing & lint — Vitest + jsdom, `tests/` mirroring `src/`, axios interceptor and service-layer coverage | [6.testing-and-lint.md](src/documentation/6.testing-and-lint.md) | [L7](https://github.com/adved85/react-shop-client/tree/L7) |
 | 9 | Docker image, CI & releases — multi-stage build, nginx runtime, GitHub Actions, GHCR publishing | [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md) + [line-by-line](src/documentation/docker_image_and_pipelines/) | [L8](https://github.com/adved85/react-shop-client/tree/L8) |
 
@@ -85,7 +85,7 @@ src/
 ├── config/          ← centralised env access, error code lists
 ├── components/
 │   ├── common/       ← shared storefront components (Header, Footer, Hero, ...)
-│   ├── context/      ← React context providers (AdminContext, ThemeContext, guards)
+│   ├── context/      ← contexts + hooks (*Context.js), providers (*Provider.jsx), route guards
 │   ├── admin/         ← admin dashboard pages + content/ sections
 │   └── hooks/        ← shared hooks
 ├── assets/          ← images, Sass styles

@@ -1,5 +1,3 @@
-import React from 'react';
-
 import LastArrivalsEight from '../../assets/images/Mens/eight.jpg';
 
 const LatestProducts = () => {

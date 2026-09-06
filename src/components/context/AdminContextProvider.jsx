@@ -1,10 +1,9 @@
-import { createContext, useState } from "react";
-import { getContext } from "./contextHelpers";
+import { useState } from "react";
+import { AdminContext } from "./AdminContext";
 import { logout as logoutAdminApi } from "../../services/authAdmin.service";
 
-// admin context + provider
-export const AdminContext = createContext(null);
-
+// Provider only — the context object and the useAdmin hook live in
+// AdminContext.js, see the note there.
 export const AdminContextProvider = ({children}) => {
     const adminStorage = localStorage.getItem("adminStorage");
     const [admin, setAdmin] = useState(adminStorage ? JSON.parse(adminStorage) : null);
@@ -27,7 +26,3 @@ export const AdminContextProvider = ({children}) => {
         {children}
     </AdminContext.Provider>
 };
-
-export function useAdmin() {
-    return getContext(AdminContext, "useAdmin", "AdminContextProvider");
-}
