@@ -1,4 +1,3 @@
-import React from 'react';
 import Layout from '../common/Layout';
 import { useForm } from "react-hook-form";
 // import { env } from '../../config/env';

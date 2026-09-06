@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Layout from './common/Layout';
 
 import { Link } from 'react-router-dom';
 import ProductImgSix from '../assets/images/Mens/six.jpg';
-import Trash from '../assets/images/icons/trash.svg';
 
 const Checkout = () => {
     const [selectedMethod, setSelectedMethod] = useState('cod');

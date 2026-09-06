@@ -1,5 +1,3 @@
-import React from 'react';
-
 import LogoWhite from '../../assets/images/logo-white.png';
 // footer icons
 import Truck from '../../assets/images/icons/truck.svg?react';

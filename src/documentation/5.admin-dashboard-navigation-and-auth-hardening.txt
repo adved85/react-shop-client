@@ -32,7 +32,6 @@ Sidebar.jsx moved from <a href=""> placeholders to real react-router-dom
 
 > src/components/common/Sidebar.jsx
 
-    import React from "react";
     import { useAdmin } from "../context/AdminContext";
     import { Link, useNavigate } from "react-router-dom";
 
@@ -115,7 +114,6 @@ slot for whichever content component the current route maps to.
 
 > src/components/admin/content/DashboardContent.jsx
 
-    import React from "react";
 
     const DashboardContent = () => {
         return (
@@ -140,7 +138,6 @@ slot for whichever content component the current route maps to.
 
 > src/components/admin/content/CategoriesContent.jsx
 
-    import React from 'react'
 
     const CategoriesContent = () => {
       return (
@@ -199,7 +196,6 @@ each section is a CHILD route rendered inside Dashboard via <Outlet>.
 
 > src/components/admin/Dashboard.jsx
 
-    import React from "react";
     import Layout from "../common/Layout";
     import Sidebar from "../common/Sidebar";
     import { Outlet } from "react-router-dom";
@@ -349,13 +345,16 @@ AdminContext.logout() previously only cleared localStorage and local React
 state — the Sanctum token stayed valid on the server, so "logging out" was
 purely cosmetic on the client.
 
-> src/components/context/AdminContext.jsx
+  ❗CHANGED SINCE THIS LAYER WAS WRITTEN
+    The lint pass moved the context object and the useAdmin hook into
+    AdminContext.js, leaving this file with only the provider component
+    (see guide 4, Step 3). The logout() logic below is unchanged.
 
-    import { createContext, useState } from "react";
-    import { getContext } from "./contextHelpers";
+> src/components/context/AdminContextProvider.jsx
+
+    import { useState } from "react";
+    import { AdminContext } from "./AdminContext";
     import { logout as logoutAdminApi } from "../../services/authAdmin.service";
-
-    export const AdminContext = createContext(null);
 
     export const AdminContextProvider = ({ children }) => {
         const adminStorage = localStorage.getItem("adminStorage");
@@ -382,10 +381,6 @@ purely cosmetic on the client.
             </AdminContext.Provider>
         );
     };
-
-    export function useAdmin() {
-        return getContext(AdminContext, "useAdmin", "AdminContextProvider");
-    }
 
   Key point:
     logoutAdminApi() is wrapped in try / finally, not try / catch alone —
@@ -419,7 +414,7 @@ FILE STRUCTURE SUMMARY
         ├── common/
         │   └── Sidebar.jsx                         ← Links to /admin/* sections, handleLogout
         └── context/
-            └── AdminContext.jsx                    ← async logout(), calls /admin/logout first
+            └── AdminContextProvider.jsx            ← async logout(), calls /admin/logout first
 
 
 -------------------------------------------------------------------

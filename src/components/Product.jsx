@@ -1,4 +1,3 @@
-import React from 'react';
 import Layout from './common/Layout';
 import { Link } from 'react-router-dom';
 
@@ -27,6 +26,9 @@ const Product = () => {
     const [thumbsSwiper, setThumbsSwiper] = useState(null);
     const [rating, setRating] = useState(4.3);
 
+    // Parked until reviews are interactive: <Rating> below is still `readonly`,
+    // so its onClick stays commented out and this handler has no caller yet.
+    // eslint-disable-next-line no-unused-vars
     const handleRating = (rate) => {
         setRating(rate);
 
