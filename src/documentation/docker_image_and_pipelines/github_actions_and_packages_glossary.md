@@ -18,7 +18,9 @@ Only terms this repository actually uses.
 
 **Step** — one command or action inside a job, run in order on the same machine.
 
-**Action** — a reusable package of steps, referenced with `uses: owner/name@version` (e.g. `actions/checkout@v4`). Pin the major version; new majors can change behaviour.
+**Action** — a reusable package of steps, referenced with `uses: owner/name@version` (e.g. `actions/checkout@v7`).
+
+> **Pinning policy here: major tags.** `@v7` is a *moving* tag — it follows every `7.x` patch and minor, so security fixes arrive without a commit from us, while a breaking `v8` never lands unannounced. The cost is that a major left behind eventually goes stale: each action's major declares the Node runtime it runs on, and when GitHub deprecates that runtime every step using it starts printing *"Node.js 20 is deprecated… forced to run on Node.js 24"*. That is the signal to bump majors, read the changelogs, and update these docs in the same commit. (The stricter alternative — pinning a full commit SHA — is immune to a compromised or force-moved tag, but turns every update into a manual diff. Worth it for images other people depend on; overkill here.)
 
 **`run:` vs `uses:`** — `run:` executes shell on the runner; `uses:` invokes a prebuilt action.
 

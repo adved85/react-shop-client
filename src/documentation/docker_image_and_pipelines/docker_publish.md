@@ -137,10 +137,10 @@ Two bonuses:
 
 ```yaml
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 ```
 
 Fresh runner, so check out again; Buildx for BuildKit features and cache import/export.
@@ -149,7 +149,7 @@ Fresh runner, so check out again; Buildx for BuildKit features and cache import/
 
 ```yaml
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -200,7 +200,7 @@ It is a **variable, not a secret**, on purpose: the value ships inside the publi
 ```yaml
       - name: Extract image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -245,7 +245,7 @@ Nothing in the `tags:` list mentions `latest`; the action's default `latest=auto
 
 ```yaml
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
