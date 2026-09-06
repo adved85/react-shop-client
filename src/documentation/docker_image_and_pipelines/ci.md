@@ -138,7 +138,7 @@ This job exists to solve one specific problem: **the Node version is needed in t
 ```yaml
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 ```
 
 Downloads the repository onto the runner. Every job starts on a fresh machine with an empty disk, so **each job checks out again** — that is why this step repeats in all four.
@@ -185,7 +185,7 @@ Result:
 
 ```yaml
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ needs.setup.outputs.node-version }}
           cache: npm
@@ -254,7 +254,7 @@ Without this job, `docker-publish.yml` would be the first thing ever to build th
 
 ```yaml
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 ```
 
 Installs BuildKit, which the build action needs for cache export/import and for `RUN --mount=type=cache` in the Dockerfile.
@@ -263,7 +263,7 @@ Installs BuildKit, which the build action needs for cache export/import and for 
 
 ```yaml
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
