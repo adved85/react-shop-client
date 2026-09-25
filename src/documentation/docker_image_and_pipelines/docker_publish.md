@@ -160,38 +160,33 @@ Fresh runner, so check out again; Buildx for BuildKit features and cache import/
 
 ---
 
-## 7. Guarding the API URL
+## 7. The API URL — deliberately not passed
+
+There is no API URL step in this workflow, and no `VITE_API_URL` in its build args. The value comes from the Dockerfile's default, `ARG VITE_API_URL=/api` (see [`react_dockerfile.md`](react_dockerfile.md), section 7).
+
+That is a conscious choice. `/api` is relative, so the browser resolves it against whatever host served the page, and the same image works on `localhost` and on a real domain. A value that never varies between environments does not belong in environment configuration.
+
+It also means `ci.yml`'s `docker-build` job and this job build **the same bundle**, so what CI verified is what ships.
+
+### History: the repository variable and its guard
+
+Earlier the URL was absolute (`https://laravel-shop-api.where/api`), so it differed per environment and came from a GitHub repository variable:
 
 ```yaml
-      # The bundle bakes this in at build time, so an unset variable would ship
-      # a released image that talks to no API at all — fail before publishing.
       - name: Require VITE_API_URL
         run: |
           if [ -z "${{ vars.VITE_API_URL }}" ]; then
-            echo "Repository variable VITE_API_URL is not set (Settings → Secrets and variables → Actions → Variables)."
+            echo "Repository variable VITE_API_URL is not set."
             exit 1
           fi
 ```
 
-`[ -z … ]` is "string is empty". An unset repository variable expands to nothing, so this catches both "never created" and "created empty".
+The guard existed because the failure it prevented was **silent**. An unset variable expands to an empty string, and an *empty* `--build-arg` overrides a Dockerfile default instead of falling back to it. The image would build, push and deploy fine, and every API call would go nowhere. With nothing passed at all, that failure mode is gone, and so is the guard.
 
-This guard exists because the failure it prevents is **silent**. Vite compiles the URL into the JavaScript (see [`react_dockerfile.md`](react_dockerfile.md), section 7); with no value the image builds perfectly, pushes perfectly, deploys perfectly — and every API call in the browser goes nowhere. Better to fail here, loudly.
+Two lessons from that setup still apply to any GitHub Actions variable:
 
-### Creating the variable
-
-**Settings → Secrets and variables → Actions → Variables → New repository variable**
-
-| Name | Value |
-|------|-------|
-| `VITE_API_URL` | `https://laravel-shop-api.where/api` |
-
-⚠️ **Do not wrap the value in quotes.** In a `.env` file quotes are syntax and the parser strips them. A GitHub Actions variable is stored **literally**, so `"https://…"` compiles the quote characters *into* the string:
-
-```text
-value "https://x/api"  →  apiUrl:`"https://x/api"`  →  requests go to  https://x/api"/admin/login
-```
-
-It is a **variable, not a secret**, on purpose: the value ships inside the public JavaScript bundle anyway. Making it a secret would only add false comfort — and secrets are masked in logs, which would make debugging harder for no gain.
+* **Values are stored literally.** Quotes you type become part of the value. `"https://x/api"` would have compiled to `` apiUrl:`"https://x/api"` `` and sent requests to `https://x/api"/admin/login`.
+* **Public means variable, not secret.** Anything shipped in the JavaScript bundle is readable by every visitor, so a secret only adds false comfort and masks the value in logs.
 
 ---
 
@@ -251,20 +246,23 @@ Nothing in the `tags:` list mentions `latest`; the action's default `latest=auto
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            NODE_VERSION=${{ needs.verify.outputs.node-tag }}
-            VITE_API_URL=${{ vars.VITE_API_URL }}
+          # VITE_API_URL is deliberately not passed: the Dockerfile's /api
+          # default is the single source, so this build matches the one
+          # ci.yml's docker-build job verified.
+          # The IDE may flag `needs.verify.outputs.node-tag` as invalid — a
+          # false positive: the extension can't follow a reusable workflow's
+          # outputs, which ci.yml declares under on.workflow_call.outputs.
+          build-args: NODE_VERSION=${{ needs.verify.outputs.node-tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 ```
 
-The difference from CI's build is `push: true` — and the two build args.
+The difference from CI's build is `push: true`. The build args are identical, which is the point: this pushes the same bundle `ci.yml` just verified.
 
 | Key | Meaning |
 |-----|---------|
 | `tags:` / `labels:` | Consumed from the `meta` step by its `id` |
-| `NODE_VERSION` | `needs.verify.outputs.node-tag` — the value `ci.yml` resolved from `.env` |
-| `VITE_API_URL` | The repository variable, now known to be non-empty |
+| `NODE_VERSION` | `needs.verify.outputs.node-tag` — the value `ci.yml` resolved from `.env`. The IDE's "context access might be invalid" warning here is a false positive: the extension can't see outputs declared in another workflow file |
 | `cache-from: type=gha` | Reuses layers `verify` just built |
 
 `labels:` are OCI annotations (source repo, commit, build time) baked into the image, which is what makes the GHCR package page link back to this repository and commit.
@@ -313,6 +311,6 @@ Deploying a newer version is a one-line change there plus `docker compose pull &
 | Tag trigger | Releases are deliberate, never accidental |
 | `verify` | The released commit passed lint, tests and the image check |
 | `permissions` | The token can push packages and nothing more |
-| `Require VITE_API_URL` | No release ships pointing at no API |
+| No `VITE_API_URL` build arg | The released bundle is the one CI verified, `apiUrl` = `/api` |
 | `metadata-action` | Exact, minor and `latest` tags; pre-releases stay out of `latest` |
 | `cache-from: gha` | The publish build reuses layers `verify` already built |

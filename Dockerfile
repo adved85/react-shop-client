@@ -20,9 +20,12 @@ COPY . .
 
 # Vite inlines VITE_* values into the bundle at build time, so the API URL is
 # fixed for the life of this image rather than read at container start.
-# Passed as a build arg (from a repo variable in docker-publish.yml) instead
-# of a committed .env.production, so changing it doesn't require a code change.
-ARG VITE_API_URL
+# A relative path keeps that from mattering: the browser resolves /api against
+# whatever host served the page, so one image works on every domain — as long
+# as the edge proxy (shop-infrastructure/proxy/default.conf) routes /api/ to
+# the API. Overridable with --build-arg, but beware: an EMPTY build arg
+# replaces this default rather than falling back to it.
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build

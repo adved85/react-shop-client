@@ -88,9 +88,7 @@ A reusable workflow can hand values **back to its caller**. Here CI republishes 
 
 ```yaml
 # in docker-publish.yml
-          build-args: |
-            NODE_VERSION=${{ needs.verify.outputs.node-tag }}
-            VITE_API_URL=${{ vars.VITE_API_URL }}
+          build-args: NODE_VERSION=${{ needs.verify.outputs.node-tag }}
 ```
 
 ---
@@ -285,7 +283,7 @@ Installs BuildKit, which the build action needs for cache export/import and for 
 
 ⚠️ `load: true` is easy to forget. Without it the image stays inside BuildKit and `docker run … react-shop-client:ci` in the next step fails with "image not found".
 
-⚠️ Note there is **no** `VITE_API_URL` here. This image is built purely to prove it builds and serves, so its bundle carries an empty API URL (`apiUrl:``). Only `docker-publish.yml` passes the real value.
+Note there is **no** `VITE_API_URL` here — and none in `docker-publish.yml` either. Both builds take the Dockerfile's `/api` default, so the bundle this job smoke-tests is byte-for-byte the one that gets published. (It used to be different: publish passed an absolute URL from a repository variable, and this job built with an empty one, so CI verified an image that never shipped.)
 
 ### The smoke test
 
