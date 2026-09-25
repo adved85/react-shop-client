@@ -9,7 +9,7 @@ Bootstrapped from the [react-vite-app](https://github.com/adved85/react-vite-app
 This is **not a monolith** — it's a client-only React SPA. All data (products, categories, orders, auth, ...) is served by a separate backend API:
 
 - Backend: [laravel-shop-api](https://github.com/adved85/laravel-shop-api) (Laravel + Sanctum)
-- Communication: REST over Axios, base URL set via `VITE_API_URL` — from `.env.development` in dev, and from a build arg baked into the image at build time for releases (see [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md))
+- Communication: REST over Axios, base URL set via `VITE_API_URL` — an absolute URL from `.env.development` in dev; in the released image, the relative `/api` (a Dockerfile default), which the edge proxy in shop-infrastructure routes to the API. Same origin, no CORS, and one image works on any domain (see [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md))
 - Auth: Sanctum token issued by the API, stored client-side and attached as a `Bearer` header by an Axios interceptor
 
 ```
@@ -30,7 +30,7 @@ Stop with:
 docker compose down
 ```
 
-See [src/documentation/1.create-config.txt](src/documentation/1.create-config.txt) for full first-time setup (installing packages, container shell access, etc.).
+See [src/documentation/1.create-config.md](src/documentation/1.create-config.md) for full first-time setup (installing packages, container shell access, etc.).
 
 Run the test suite and the linter from inside the container — there is no Node.js on the host:
 
@@ -52,7 +52,7 @@ frontend:
 Cut a release by pushing a tag (`git tag v0.1.0 && git push origin v0.1.0`); CI runs lint, tests and an image smoke test before publishing. Build it locally with:
 
 ```sh
-docker build --build-arg VITE_API_URL="https://your-api/api" -t react-shop-client:local .
+docker build -t react-shop-client:local .   # VITE_API_URL defaults to /api
 docker run --rm -p 8099:80 react-shop-client:local
 ```
 
@@ -64,8 +64,8 @@ The app was built up in layers, each one documented in [src/documentation/](src/
 
 | # | Layer | Docs | Branch |
 |---|-------|------|--------|
-| 1 | Project setup — Vite scaffold, Docker, initial packages, git init | [1.create-config.txt](src/documentation/1.create-config.txt) | [R1](https://github.com/adved85/react-shop-client/tree/R1) |
-| 2 | Home & Shop pages — routes, react-bootstrap, Sass styles, assets/images | [2.home-shop-ui.txt](src/documentation/2.home-shop-ui.txt) | [R1](https://github.com/adved85/react-shop-client/tree/R1) |
+| 1 | Project setup — Vite scaffold, Docker, initial packages, git init | [1.create-config.md](src/documentation/1.create-config.md) | [R1](https://github.com/adved85/react-shop-client/tree/R1) |
+| 2 | Home & Shop pages — routes, react-bootstrap, Sass styles, assets/images | [2.home-shop-ui.md](src/documentation/2.home-shop-ui.md) | [R1](https://github.com/adved85/react-shop-client/tree/R1) |
 | 3 | Product listing polish — Swiper carousel, SVG icons, `Home` decomposed into common components | *(no write-up yet)* | [R2](https://github.com/adved85/react-shop-client/tree/R2) |
 | 4 | Product / Cart / Checkout pages — markup | *(no write-up yet)* | [R3](https://github.com/adved85/react-shop-client/tree/R3) |
 | 5 | Backend API integration — Axios client, interceptors, env config, service layer, toast notifications | [3.backend-api-integration.md](src/documentation/3.backend-api-integration.md) | [R4](https://github.com/adved85/react-shop-client/tree/R4) |

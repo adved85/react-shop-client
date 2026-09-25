@@ -16,14 +16,12 @@ const Login = () => {
     const { login: setAdminSession } = useAdmin();
 
     const handleLogin = async (data) => {
-        console.log(data);
         setIsLoading(true);
 
         try {
-            const resposeData = await login(data);
-            console.log(resposeData);
+            const responseData = await login(data);
 
-            const { token, user: { email, name, id, system_role } } = resposeData;
+            const { token, user: { email, name, id, system_role } } = responseData;
 
             const adminData = {
                 token,
@@ -37,8 +35,10 @@ const Login = () => {
             setAdminSession(adminData);
             navigate("/admin/dashboard");
 
-        } catch (error) {
-            console.error(error);
+        } catch {
+            // The API client already toasted the error and logged a redacted
+            // summary. Logging `error` here would print error.config.data —
+            // the submitted password.
         } finally {
             setIsLoading(false);
         }

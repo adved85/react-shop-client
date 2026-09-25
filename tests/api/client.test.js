@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "react-toastify";
 import { api } from "../../src/api/client";
 
@@ -97,5 +97,99 @@ describe("network errors", () => {
         await expect(onResponseError(error)).rejects.toBe(error);
 
         expect(toast.error).toHaveBeenCalledWith("Network Error: Please, check your internet connection.");
+    });
+});
+
+describe("retries", () => {
+    // An error shaped the way axios hands it to the interceptor, with a
+    // per-request adapter so the retry resolves without any network.
+    const serverError = (status, overrides = {}) => ({
+        config: requestConfig(overrides),
+        response: { status, data: {} },
+    });
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("retries a GET on 503 and hands the caller the retry's result", async () => {
+        const adapter = vi.fn(async (config) => ({
+            status: 200, statusText: "OK", headers: {}, config,
+            data: { success: true, data: { id: 7 } },
+        }));
+
+        const result = onResponseError(serverError(503, { adapter }));
+        await vi.advanceTimersByTimeAsync(1000);
+
+        await expect(result).resolves.toEqual({ id: 7 });
+        expect(adapter).toHaveBeenCalledOnce();
+    });
+
+    it("stops after 3 retries when the server keeps failing", async () => {
+        const adapter = vi.fn(async (config) => {
+            throw Object.assign(new Error("Service Unavailable"), {
+                config, response: { status: 503, data: {} },
+            });
+        });
+
+        const result = onResponseError(serverError(503, { adapter }));
+        const settled = expect(result).rejects.toMatchObject({ response: { status: 503 } });
+        await vi.advanceTimersByTimeAsync(3000);
+
+        await settled;
+        expect(adapter).toHaveBeenCalledTimes(3);
+    });
+
+    it("never retries a POST — resending could duplicate an order", async () => {
+        const adapter = vi.fn();
+        const error = serverError(503, { method: "post", url: "/orders", adapter });
+
+        await expect(onResponseError(error)).rejects.toBe(error);
+        // Let the whole retry window pass: a retry is delayed, so asserting
+        // straight away would miss one scheduled in the background.
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(adapter).not.toHaveBeenCalled();
+    });
+
+    it("rejects cleanly when the error has no config", async () => {
+        const error = { response: { status: 503, data: {} } };
+
+        await expect(onResponseError(error)).rejects.toBe(error);
+    });
+});
+
+describe("logging", () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
+    it("never logs the submitted password when a login fails", async () => {
+        const error = {
+            config: requestConfig({
+                method: "post",
+                url: "/admin/login",
+                data: JSON.stringify({ email: "admin@shop.test", password: "hunter2" }),
+            }),
+            response: { status: 401, data: { message: "Either email/password is incorrect" } },
+        };
+
+        await expect(onResponseError(error)).rejects.toBe(error);
+
+        const printed = JSON.stringify(console.error.mock.calls);
+        expect(printed).toContain("/admin/login");
+        expect(printed).not.toContain("hunter2");
+    });
+
+    it("keeps request and response bodies out of the production console", async () => {
+        vi.stubEnv("DEV", false);
+
+        await onRequest(requestConfig({ method: "post", data: { password: "hunter2" } }));
+        await onResponse({ status: 200, data: { data: { token: "secret-token" } } });
+
+        expect(console.log).not.toHaveBeenCalled();
     });
 });

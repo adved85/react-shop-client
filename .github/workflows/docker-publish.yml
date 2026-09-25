@@ -48,15 +48,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # The bundle bakes this in at build time, so an unset variable would ship
-      # a released image that talks to no API at all — fail before publishing.
-      - name: Require VITE_API_URL
-        run: |
-          if [ -z "${{ vars.VITE_API_URL }}" ]; then
-            echo "Repository variable VITE_API_URL is not set (Settings → Secrets and variables → Actions → Variables)."
-            exit 1
-          fi
-
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
@@ -78,8 +69,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            NODE_VERSION=${{ needs.verify.outputs.node-tag }}
-            VITE_API_URL=${{ vars.VITE_API_URL }}
+          # VITE_API_URL is deliberately not passed: the Dockerfile's /api
+          # default is the single source, so this build matches the one
+          # ci.yml's docker-build job verified.
+          # The IDE may flag `needs.verify.outputs.node-tag` as invalid — a
+          # false positive: the extension can't follow a reusable workflow's
+          # outputs, which ci.yml declares under on.workflow_call.outputs.
+          build-args: NODE_VERSION=${{ needs.verify.outputs.node-tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

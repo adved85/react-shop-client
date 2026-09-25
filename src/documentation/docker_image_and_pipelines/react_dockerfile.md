@@ -127,31 +127,52 @@ Copies the build context — everything `.dockerignore` does not exclude. That e
 ```dockerfile
 # Vite inlines VITE_* values into the bundle at build time, so the API URL is
 # fixed for the life of this image rather than read at container start.
-# Passed as a build arg (from a repo variable in docker-publish.yml) instead
-# of a committed .env.production, so changing it doesn't require a code change.
-ARG VITE_API_URL
+# A relative path keeps that from mattering: the browser resolves /api against
+# whatever host served the page, so one image works on every domain — as long
+# as the edge proxy (shop-infrastructure/proxy/default.conf) routes /api/ to
+# the API. Overridable with --build-arg, but beware: an EMPTY build arg
+# replaces this default rather than falling back to it.
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 ```
 
-`ARG` receives the value from `--build-arg`; `ENV` promotes it to a real environment variable so the `npm run build` process below can see it. An `ARG` alone would **not** be visible to the build.
+`ARG` receives the value from `--build-arg`, or falls back to `/api` when none is passed; `ENV` promotes it to a real environment variable so the `npm run build` process below can see it. An `ARG` alone would **not** be visible to the build.
 
-**This is the single most surprising thing about shipping a Vite app in a container.** The value is compiled into the JavaScript as a literal:
+**This is the single most surprising thing about shipping a Vite app in a container.** The value is compiled into the JavaScript as a literal — there is no runtime lookup:
 
 ```sh
-# built with no build arg
 $ grep -o 'apiUrl:[^,}]*' assets/index-*.js
-apiUrl:``
-
-# built with --build-arg VITE_API_URL="https://laravel-shop-api.where/api"
-$ grep -o 'apiUrl:[^,}]*' assets/index-*.js
-apiUrl:`https://laravel-shop-api.where/api`
+apiUrl:`/api`
 ```
 
-Consequences:
+So setting `VITE_API_URL` in shop-infrastructure's `compose.yml` would do **nothing** — far too late.
 
-* One image = one API URL. Pointing a built image at a different backend means **rebuilding**.
-* Setting `VITE_API_URL` in shop-infrastructure's `compose.yml` would do **nothing** — far too late.
-* This is why `docker-publish.yml` refuses to publish when the repository variable is empty.
+### Why a relative path makes that harmless
+
+With an **absolute** URL (`https://api.example.com/api`), baking it in would bind the image to one backend: a different environment would mean a different build. That is how this image started, with the URL fed from a GitHub repository variable.
+
+A **relative** `/api` has no host in it. The browser resolves it against whichever origin served the page:
+
+```text
+http://localhost/admin    → http://localhost/api/admin/login
+https://shop.com/admin    → https://shop.com/api/admin/login
+```
+
+One image, every domain — and since the value never varies, it lives here as a default instead of in a GitHub variable. `ci.yml` and `docker-publish.yml` both build without passing it, so **the image CI verifies is the image that ships**.
+
+⚠️ **The dependency moved, it did not disappear.** This only works because the edge proxy in shop-infrastructure routes `/api/` to the API over FastCGI. Remove that `location` block and every API call gets `index.html` back from the frontend. Nothing in this repo would notice.
+
+### How the default behaves with `--build-arg`
+
+| Build command | `VITE_API_URL` |
+|---|---|
+| no `--build-arg` | `/api` — the default |
+| `--build-arg VITE_API_URL=https://x.com/api` | `https://x.com/api` — overrides |
+| `--build-arg VITE_API_URL=` | **empty** — overrides; does *not* fall back |
+
+The last row is the trap: "set to empty" is not "unset". A workflow that passes `VITE_API_URL=${{ vars.SOMETHING }}` for an unset variable would silently ship an image with no API URL. Which is one more reason not to pass it at all.
+
+**When you would need an absolute URL again:** only if the frontend and API stop sharing an origin — the API moving to its own subdomain, the frontend going to a CDN. Then it varies per environment again, and CORS comes back.
 
 ---
 
@@ -218,14 +239,9 @@ CMD ["nginx", "-g", "daemon off;"]
 ## Build it yourself
 
 ```sh
-# how CI's docker-build job builds it (no API URL — verification only)
-docker build --build-arg NODE_VERSION=25-alpine -t react-shop-client:ci .
-
-# how docker-publish.yml builds it (real API URL baked in)
-docker build \
-    --build-arg NODE_VERSION=25-alpine \
-    --build-arg VITE_API_URL="https://laravel-shop-api.where/api" \
-    -t react-shop-client:local .
+# how both ci.yml and docker-publish.yml build it — VITE_API_URL comes from
+# the Dockerfile's /api default
+docker build --build-arg NODE_VERSION=25-alpine -t react-shop-client:local .
 
 # run it
 docker run --rm -p 8099:80 react-shop-client:local
@@ -245,7 +261,7 @@ docker run --rm --entrypoint sh react-shop-client:local -c "ls /usr/share/nginx/
 | `ARG NODE_VERSION` | One Node version for compose + CI + image | Version drifts between dev and prod |
 | `COPY package*.json` before source | Keeps `npm ci` cached | Full reinstall on every code edit |
 | `RUN --mount=type=cache` | Reuses npm's download cache | Slower rebuilds, more network |
-| `ARG`/`ENV VITE_API_URL` | Bakes the API URL into the bundle | Released image talks to no API |
+| `ARG VITE_API_URL=/api` + `ENV` | Bakes a relative API URL into the bundle | Released image talks to no API |
 | `FROM nginx:alpine` | Small runtime, no Node | ~10× larger image |
 | `COPY --from=build` | Brings only `dist/` across | Source and toolchain ship to production |
 | `daemon off;` | Keeps the container alive | Container exits immediately |

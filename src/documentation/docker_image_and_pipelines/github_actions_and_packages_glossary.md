@@ -52,9 +52,9 @@ needs.setup.outputs.node-tag     # read a job output, another job
 | `github.actor` | Who triggered it |
 | `github.event_name` | `push`, `pull_request`, `workflow_dispatch`… |
 | `secrets.GITHUB_TOKEN` | Auto-generated token for this run |
-| `vars.VITE_API_URL` | A repository **variable** |
+| `vars.NAME` | A repository **variable** (none used here any more — see below) |
 
-**Secret vs variable** — both live in Settings → Secrets and variables → Actions. Secrets are write-only and masked in logs; variables are readable and shown in plain text. `VITE_API_URL` is a **variable** because it ships inside the public JavaScript bundle anyway.
+**Secret vs variable** — both live in Settings → Secrets and variables → Actions. Secrets are write-only and masked in logs; variables are readable and shown in plain text. Rule of thumb: anything that ships inside the public JavaScript bundle is a **variable**, never a secret — every visitor can read it anyway. (This repo once kept `VITE_API_URL` as a variable; it is now a Dockerfile default, see `react_dockerfile.md` §7.)
 
 ⚠️ Neither is quoted. The stored value is used literally — quotes you type become part of the value.
 
@@ -122,7 +122,7 @@ needs.setup.outputs.node-tag     # read a job output, another job
 
 **`vitest run` vs `vitest`** — `run` executes once and exits. Bare `vitest` starts watch mode and would hang a CI job forever.
 
-**Vite build-time inlining** — Vite replaces `import.meta.env.VITE_*` with **literal values at build time**. There is no runtime lookup, so an image is bound to the API URL it was built with. This single fact drives the build arg, the repository variable and the guard step in `docker-publish.yml`.
+**Vite build-time inlining** — Vite replaces `import.meta.env.VITE_*` with **literal values at build time**. There is no runtime lookup, so an image is bound to the API URL it was built with. That is harmless here because the URL is the **relative** `/api`, set as the Dockerfile's `ARG` default: the browser resolves it against whatever host served the page. An absolute URL would bind the image to one backend.
 
 **Fingerprinted assets** — `vite build` writes content-hashed filenames (`index-lDf1NLNW.js`). New content means a new URL, which is what makes a one-year `immutable` cache header safe.
 
