@@ -32,12 +32,19 @@ docker compose down
 
 See [src/documentation/1.create-config.md](src/documentation/1.create-config.md) for full first-time setup (installing packages, container shell access, etc.).
 
-Run the test suite and the linter from inside the container — there is no Node.js on the host:
+Run the test suite (Vitest, see [6.testing-and-lint.md](src/documentation/6.testing-and-lint.md)) and the linter in the container — there is no Node.js on the host. While `docker compose up` is running:
 
 ```sh
-docker compose run --rm frontend sh
-npm test        # vitest, see src/documentation/6.testing-and-lint.md
-npm run lint
+docker compose exec frontend npm run lint
+docker compose exec frontend npm test
+docker compose exec frontend npx vitest     # watch mode, Ctrl+C to stop
+```
+
+If the container isn't running:
+
+```sh
+docker compose run --rm frontend npm run lint
+docker compose run --rm frontend npm test
 ```
 
 ## Production image
@@ -74,6 +81,7 @@ The app was built up in layers, each one documented in [src/documentation/](src/
 | 8 | Testing & lint — Vitest + jsdom, `tests/` mirroring `src/`, axios interceptor and service-layer coverage | [6.testing-and-lint.md](src/documentation/6.testing-and-lint.md) | [L7](https://github.com/adved85/react-shop-client/tree/L7) |
 | 9 | Docker image, CI & releases — multi-stage build, nginx runtime, GitHub Actions, GHCR publishing | [7.docker-ci-and-releases.md](src/documentation/7.docker-ci-and-releases.md) + [line-by-line](src/documentation/docker_image_and_pipelines/) | [L8](https://github.com/adved85/react-shop-client/tree/L8) |
 
+
 Each doc explains the *why* behind that step (bugs it fixed, decisions made), not just the *what* — check them before touching related code.
 
 ## Project structure
@@ -81,20 +89,20 @@ Each doc explains the *why* behind that step (bugs it fixed, decisions made), no
 ```
 src/
 ├── api/            ← axios client + per-resource API functions
-├── services/        ← business logic layer, called by components
+├── services/        ← only for logic on top of API calls; see example.service.js
+├── utils/           ← plain helpers, e.g. form.js (isInvalid, applyServerErrors)
 ├── config/          ← centralised env access, error code lists
 ├── components/
-│   ├── common/       ← shared storefront components (Header, Footer, Hero, ...)
+│   ├── common/       ← shared components (Header, Footer, Breadcrumb, SpinnerGrow, table/ rows, ...)
 │   ├── context/      ← contexts + hooks (*Context.js), providers (*Provider.jsx), route guards
-│   ├── admin/         ← admin dashboard pages + content/ sections
+│   ├── admin/         ← AdminLayout, Login, one folder per section (dashboard/, departments/)
 │   └── hooks/        ← shared hooks
 ├── assets/          ← images, Sass styles
 └── documentation/    ← build log, one file per layer (see table above)
 
 tests/               ← mirrors src/; tests/api/client.test.js covers src/api/client.js
 ├── setup.js          ← in-memory localStorage for Node 25 + jsdom
-├── api/
-└── services/
+└── api/
 
 Dockerfile           ← multi-stage: node builds the bundle, nginx serves it
 docker/nginx/        ← the runtime nginx config (SPA fallback, gzip, caching)

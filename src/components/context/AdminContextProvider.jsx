@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminContext } from "./AdminContext";
-import { logout as logoutAdminApi } from "../../services/authAdmin.service";
+import { logout as logoutAdminApi } from "../../api/adminAuth";
 
 // Provider only — the context object and the useAdmin hook live in
 // AdminContext.js, see the note there.

@@ -17,7 +17,7 @@ const Sidebar = () => {
             <div className="card-body p-5">
                 <ul>
                     <li><Link to="/admin/dashboard">Dashboard</Link></li>
-                    <li><Link to="/admin/categories">Categories</Link></li>
+                    <li><Link to="/admin/departments">Departments</Link></li>
                     <li><Link to="/admin/brands">Brands</Link></li>
                     <li><Link to="/admin/brands">Products</Link></li>
                     <li><Link to="/admin/brands">Orders</Link></li>

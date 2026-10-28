@@ -1,6 +1,9 @@
+import Breadcrumb from "../../common/Breadcrumb";
+
 const DashboardContent = () => {
     return (
         <div className="row">
+            <Breadcrumb />
             <div className="col-md-4">
                 <div className="card shadow">
                     <div className="card-body">

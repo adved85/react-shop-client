@@ -12,7 +12,7 @@ const Header = () => {
     return (
         <header className='shadow'>
             <div className='bg-dark text-center py-3'>
-                <span className='text-white'>Your Fashion Pertner</span>
+                <span className='text-white'>Your Fashion Partner</span>
             </div>
 
             <div className='container'>

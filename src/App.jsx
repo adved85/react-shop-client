@@ -5,10 +5,13 @@ import Product from './components/Product';
 import Cart from './components/Cart';
 import Checkout from './components/Checkout';
 import Login from './components/admin/Login';
-import Dashboard from './components/admin/Dashboard';
+import AdminLayout from './components/admin/AdminLayout';
 
-import DashboardContent from './components/admin/content/DashboardContent';
-import CategoriesContent from './components/admin/content/CategoriesContent'
+import DashboardContent from './components/admin/dashboard/DashboardContent';
+import DepartmentsContent from './components/admin/departments/DepartmentsContent';
+import DepartmentCreate from './components/admin/departments/DepartmentCreate';
+import DepartmentShow from './components/admin/departments/DepartmentShow';
+import DepartmentEdit from './components/admin/departments/DepartmentEdit';
 
 import { RequireAdmin } from './components/context/RequireAdmin';
 import { AdminContextProvider } from './components/context/AdminContextProvider';
@@ -29,12 +32,15 @@ function App() {
 
             <Route path="/admin" element={
               <RequireAdmin>
-                <Dashboard />
+                <AdminLayout />
               </RequireAdmin>
             } >
               <Route index element={<DashboardContent />} />
               <Route path="dashboard" element={<DashboardContent />} />
-              <Route path="categories" element={<CategoriesContent />} />
+              <Route path="departments" element={<DepartmentsContent />} />
+              <Route path="departments/create" element={<DepartmentCreate />} />
+              <Route path="departments/:id" element={<DepartmentShow />} />
+              <Route path="departments/:id/edit" element={<DepartmentEdit />} />
             </Route>
 
           </Routes>
