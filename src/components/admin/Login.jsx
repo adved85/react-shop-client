@@ -1,11 +1,13 @@
 import Layout from '../common/Layout';
 import { useForm } from "react-hook-form";
 // import { env } from '../../config/env';
-import { login } from '../../services/authAdmin.service';
+import { login } from '../../api/adminAuth';
 import { useNavigate } from "react-router";
 import { useAdmin } from "../context/AdminContext";
 
 import { useState } from "react";
+
+import SpinnerGrow from '../common/SpinnerGrow';
 
 const Login = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
@@ -65,7 +67,7 @@ const Login = () => {
                                 <h3>Admin Login / admin@admin.com / password</h3>
 
                                 {isLoading ?
-                                    <div className="spinner-grow text-secondary" role="status"></div>
+                                    <SpinnerGrow/>
                                     :
                                     <form onSubmit={handleSubmit(handleLogin)}>
                                         <div className="mb-3">

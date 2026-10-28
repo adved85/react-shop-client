@@ -10,5 +10,9 @@ export const ENDPOINTS = {
         login: "/admin/login",
         logout: "/admin/logout",
         register: "/admin/register",
+    },
+
+    adminDepartments: {
+        link: "/admin/v1/departments",
     }
 }

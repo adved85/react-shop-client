@@ -13,7 +13,7 @@ const RETRYABLE_METHODS = ["get", "head", "options"];
 // Request and response bodies carry passwords and tokens, so they are only
 // printed by the dev server. Vite compiles import.meta.env.DEV to `false` in a
 // production build, which drops these calls from the bundle entirely.
-function debug(...args) {
+function debugLog(...args) {
     if (import.meta.env.DEV) {
         console.log(...args);
     }
@@ -35,6 +35,15 @@ function getAdminToken() {
     return adminStorage ? JSON.parse(adminStorage).token : null;
 }
 
+function extractNestedResponseData(response) {
+    // Laravel wraps payloads as { success, message, data }; return the inner data
+    if (response.data && response.data.data) {
+
+        return response.data.data;
+    }
+    return response.data;
+}
+
 export const api = axios.create({
     baseURL: env.apiUrl,
     headers: {
@@ -51,11 +60,15 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        debug('Request:', {
+        debugLog('Request:', {
             method: config.method.toUpperCase(),
             url: config.url,
             data: config.data || 'No data',
         });
+
+        if (config.method.toUpperCase() === "POST" && (config?.data?.body || config?.data?.params)) {
+            debugLog("Request Body Format: please pass the data directly, without wrapping it in an object.");
+        }
 
         // Axios does this by default
         if (config.data && typeof config.data !== "string") {
@@ -75,7 +88,7 @@ api.interceptors.response.use(
     response => {
         const responseData = extractNestedResponseData(response);
 
-        debug('Response:', {
+        debugLog('Response:', {
             status: response.status,
             data: responseData,
             time: new Date().toLocaleTimeString(),
@@ -121,13 +134,4 @@ function shouldRetry({ response, config }) {
         && RETRYABLE_METHODS.includes((config.method || "get").toLowerCase())
         && retryErrorCodes.includes(response.status)
         && (config._retryCount || 0) < MAX_RETRIES;
-}
-
-function extractNestedResponseData(response) {
-    // extract nested data
-    if (response.data && response.data.data) {
-
-        return response.data.data;
-    }
-    return response.data;
 }
